@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify, session
 from flask_mail import Mail, Message
 from datetime import datetime
 from .utils import generate_and_store_otp, otp_storage
+from flask_login import login_user, login_required, logout_user
+from .user import User
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -55,9 +57,18 @@ def verify_otp():
         return jsonify({'error': 'OTP has expired'}), 401
     
     if otp == record['otp']:
-        return jsonify({'message': 'OTP verified successfully ✅'}), 200
-    else:               
-        return jsonify({'error': 'Invalid OTP'}), 403
+        user = DBUser.query.filter_by(email=email).first()
+        if not user:
+            user = DBUser(email=email, role='citizen')
+            db.session.add(user)
+            db.session.commit()
+            
+        login_user(user)
+        print("✅ User logged in:", user.email)
+
+        return jsonify({'message': 'OTP verified successfully ✅'}), 200   
+                 
+    return jsonify({'error': 'Invalid OTP'}), 403
     
 
 @auth_bp.route('/mock-login', methods=["POST"])
@@ -70,3 +81,10 @@ def mock_login():
     session['user_role'] = role
 
     return jsonify({'message': f'Logged in as {role}'}), 200
+
+
+@auth_bp.route('/logout', methods=['POST'])
+@login_required
+def logout():
+    logout_user() 
+    return jsonify({'message': 'Logged out successfully ✅'}), 200

@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template
 from .rbac.decorators import require_role
+from flask_login import login_required, current_user
 
 core_bp = Blueprint('core', __name__)
 
@@ -11,3 +12,9 @@ def home():
 @require_role('admin')
 def admin_panel():
     return "Welcome, Admin!"
+
+@core_bp.route('/dashboard')
+@login_required
+def dashboard():
+    print("🎯 Current user:", current_user)
+    return f"You're logged in as {current_user.email} 🎉"
